@@ -22,6 +22,19 @@
 
 #define MOD "(psutil) "
 
+#define _isspace0(c) ((c) == '\t' || (c) == '\n' || (c) == ' ' || (c) == '\0')
+#define _isspace(c)  ((c) == '\t' || (c) == '\n' || (c) == ' ')
+#define strim_head(beg) do {                                \
+        while (_isspace((unsigned char)*beg))               \
+                beg++;                                      \
+} while(0)
+#define strim_tail(beg, size) do {                          \
+        char *end = beg + size;                             \
+        while (end > beg && _isspace0((unsigned char)*end)) \
+                end--;                                      \
+        end[1] = 0;                                         \
+} while(0)
+
 #define ps_open_file(format, pid, ivd) do {                                   \
 	rc = snprintf(file, sizeof(file), format, pid);                       \
 	if (rc < 0 || rc >= (int)sizeof(file)) {                              \
@@ -51,6 +64,17 @@
 
 static long HERTZ = -1;
 static long HERPAGESIZE = -1;
+
+char *ps_get_comm(pid_t pid)
+{
+        int rc, fd;
+        char file[FILE_LEN], buffer[MAX_ARGS];
+
+        ps_open_file("/proc/%d/comm", pid, NULL);
+        strim_tail(buffer, rc);
+
+        return strdup(buffer);
+}
 
 static int strsplit(char *string, char **fields, int size)
 {
@@ -164,4 +188,6 @@ int ps_get_process(pid_t pid, struct procinfo *info)
 
 	return 0;
 }
+
+#undef ps_open_file
 
