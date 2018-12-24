@@ -14,6 +14,38 @@
 
 #define CGM_STATS_FILE "memory.stat"
 
+
+int ps_get_from_file(const char *path, uint64_t *ret)
+{
+        /* MAX(uint64_t): 18446744073709551615 */
+        int fd, rc;
+        char buffer[32];
+
+        if (path == NULL || ret == NULL)
+                return -1;
+
+        fd = open(path, O_RDONLY);
+        if (fd < 0)
+                return -1;
+        rc = read(fd, buffer, sizeof(buffer));
+        if (rc < 0) {
+                close(fd);
+                return -1;
+        }
+        buffer[rc] = 0;
+        close(fd);
+
+        errno = 0;
+        *ret = strtoull(buffer, NULL, 10);
+        if (errno == ERANGE)
+                return -1;
+
+        return 0;
+}
+
+
+
+
 int ps_cgrp_stats(const char *path, struct cgrpinfo *info)
 {
         int rc, fd, i, offset;
