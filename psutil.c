@@ -108,6 +108,33 @@ char *ps_get_cmdline(pid_t pid)
 	return strdup(buffer);
 }
 
+static int ps_get_fd_count(int pid)
+{
+        char dirname[64]; /* max /proc/65536/fd */
+        DIR *dh;
+        struct dirent *ent;
+        int count = 0, rc;
+
+        rc = snprintf(dirname, sizeof(dirname), "/proc/%i/fd", pid);
+        if (rc < 0 || rc > (int)sizeof(dirname)) {
+                log_error("failed to get fd count, format directory failed, rc %d.", rc);
+                return -1;
+        }
+
+        dh = opendir(dirname);
+        if (dh == NULL) {
+                log_error("failed to open directory '%s', %s.", dirname, strerror(errno));
+                return -1;
+        }
+        while ((ent = readdir(dh)) != NULL) {
+                if (ent->d_name[0] < '0' || ent->d_name[0] > '9')
+                        continue;
+                count++;
+        }
+        closedir(dh);
+
+        return count;
+}
 
 long ps_get_uptime(void)
 {
