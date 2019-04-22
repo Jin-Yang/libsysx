@@ -1,7 +1,7 @@
 
 CFLAGS = -g -Wall
 
-all: psutil.o pscgrp.o
+all: src/psutil.o src/pscgrp.o
 	gcc -shared -fPIC -o libsysx.so $^
 	ar crv libsysx.a $^
 

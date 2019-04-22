@@ -4,13 +4,15 @@
 #include <fcntl.h>
 
 struct procinfo {
-	long rss; /* bytes */
+	long rss; /* Kbytes */
 	double cpu_usage; /* 0.9 <-> 90% */
 };
 
 int ps_init(void);
 char *ps_get_comm(pid_t pid);
+int ps_get_fd_count(int pid);
 int ps_get_process(pid_t pid, struct procinfo *info);
+
 
 
 struct cgrpinfo {

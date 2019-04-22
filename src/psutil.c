@@ -8,9 +8,11 @@
 #include <unistd.h>
 #include <stdlib.h>
 
-#include <sys/types.h>
-#include <sys/stat.h>
+#include <dirent.h>
+
 #include <fcntl.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 #include <sys/sysinfo.h>
 
@@ -108,22 +110,22 @@ char *ps_get_cmdline(pid_t pid)
 	return strdup(buffer);
 }
 
-static int ps_get_fd_count(int pid)
+int ps_get_fd_count(int pid)
 {
-        char dirname[64]; /* max /proc/65536/fd */
         DIR *dh;
+        char dirname[64]; /* max /proc/65536/fd */
         struct dirent *ent;
         int count = 0, rc;
 
         rc = snprintf(dirname, sizeof(dirname), "/proc/%i/fd", pid);
         if (rc < 0 || rc > (int)sizeof(dirname)) {
-                log_error("failed to get fd count, format directory failed, rc %d.", rc);
+                log_error(MOD "failed to get fd count, format directory failed, rc %d.", rc);
                 return -1;
         }
 
         dh = opendir(dirname);
         if (dh == NULL) {
-                log_error("failed to open directory '%s', %s.", dirname, strerror(errno));
+                log_error(MOD "failed to open directory '%s', %s.", dirname, strerror(errno));
                 return -1;
         }
         while ((ent = readdir(dh)) != NULL) {
@@ -210,7 +212,7 @@ int ps_get_process(pid_t pid, struct procinfo *info)
 	stime = atoll(fields[14]);     /* stime (15) */
 	starttime = atoll(fields[21]); /* starttime (22) */
 
-	info->rss = atoll(fields[23]) * HERPAGESIZE; /* rss (24), Bytes */
+	info->rss = atoll(fields[23]) * HERPAGESIZE / 1024; /* rss (24), KBytes */
 	info->cpu_usage = (double)(utime + stime) / (double)(boottime * HERTZ - starttime);
 
 	return 0;
