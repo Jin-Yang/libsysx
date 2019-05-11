@@ -3,7 +3,14 @@
 
 #include <fcntl.h>
 
+#define ERR_COMMON 1
+#define ERR_FORMAT 2
+
 struct procinfo {
+	struct {
+		long uptime;
+		long protime;
+	} _;
 	long rss; /* Kbytes */
 	double cpu_usage; /* 0.9 <-> 90% */
 };

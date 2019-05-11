@@ -190,33 +190,59 @@ int ps_init(void)
 	return 0;
 }
 
+/*
+ * NOTE:
+ *    1. CPU Usage.
+ *       if info._.uptime <= 0, get the average cpusage since process started.
+ *          watch -n 1 "ps -o ruser,pid,%cpu,%mem,vsz,rss,comm p `pidof foobar`"
+ *       else info._.uptime <= 0, get the average cpusage since last update.
+ *          top -d 1 -p `pidof foobar`
+ */
 int ps_get_process(pid_t pid, struct procinfo *info)
 {
-	char file[FILE_LEN], buffer[4096];
-	int rc, fd;
-	char *fields[32];
+        int rc;
+        long protime, uptime, ttime;
+        char *fields[32], buff[4096];
 
-	long utime, stime, starttime, boottime;
+        if (pid <= 0 || info == NULL) {
+                log_error(MOD "invalid arguments (pid, info) = (%d, %p).",
+                                pid, info);
+                return -ERR_COMMON;
+        }
 
-	ps_open_file("/proc/%d/stat", pid, -1);
+        rc = ps_read_file(buff, sizeof(buff), "/proc/%d/stat", pid);
+        if (rc < 0) /* error message already print in the function */
+                return -ERR_COMMON;
+        rc = strsplit(buff, fields, SASIZE(fields));
+        if (rc < 25) {
+                log_error(MOD "only %d fields got from '/proc/%d/stat' file, expect >= 25",
+                                rc, pid);
+                return -1;
+        }
 
-	rc = strsplit(buffer, fields, SASIZE(fields));
-	if (rc < 25) {
-		log_error(MOD "only %d fields got for '%s', expect >= 25",
-				rc, file);
-		return -1;
-	}
+        uptime = ps_get_uptime();
+        if (uptime < 0)
+                return -1;
 
-	boottime = ps_get_uptime();
-	utime = atoll(fields[13]);     /* utime (14) */
-	stime = atoll(fields[14]);     /* stime (15) */
-	starttime = atoll(fields[21]); /* starttime (22) */
+        info->rss = atoll(fields[23]) * HERPAGESIZE / 1024; /* rss (24), KBytes */
 
-	info->rss = atoll(fields[23]) * HERPAGESIZE / 1024; /* rss (24), KBytes */
-	info->cpu_usage = (double)(utime + stime) / (double)(boottime * HERTZ - starttime);
+        /* [(utime + stime) - last(utime + stime)] / {[bootime - last(bootime)] * HZ} */
+        protime = atoll(fields[13]) + atoll(fields[14]); /* utime (14) + stime (15) */
+        if (info->_.uptime <= 0)
+                ttime = (uptime * HERTZ - atoll(fields[21])); /* starttime (22) */
+        else
+                ttime = (uptime - info->_.uptime) * HERTZ;
+        if (ttime <= 0) {
+                log_error("got invalid boot time %ld, uptime %ld last %ld.",
+                                ttime, uptime, info->_.uptime);
+                return -1;
+        }
+        info->cpu_usage = ((double)(protime - info->_.protime) / (double)ttime) * 100.;
 
-	return 0;
+        info->_.uptime = uptime;
+        info->_.protime = protime;
+
+        return 0;
 }
-
 #undef ps_open_file
 

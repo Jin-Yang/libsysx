@@ -14,4 +14,6 @@
 	#define log_error(fmt, args...)    do { printf("error: " fmt, ## args); putchar('\n'); } while(0);
 #endif
 
+int ps_read_file(char *buff, int size, const char *fmt, ...);
+
 #endif
