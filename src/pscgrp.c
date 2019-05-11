@@ -110,4 +110,38 @@ int ps_cgrp_stats(const char *path, struct cgrpinfo *info)
 
         return 0;
 }
+#if 0
+static int psc_cpusage(const char *path, gauge_t *ret)
+{
+        static unsigned long long usage;
+        static cdtime_t last = -1;
+        unsigned long long curr;
+        cdtime_t now = cdtime();
+        int rc;
+        char file[PATH_MAX];
 
+        assert(sizeof(unsigned long long) == sizeof(uint64_t));
+        snprintf_s(file, sizeof(file), sizeof(file), "%s/cpuacct.usage", path);
+
+        rc = get_int_from_file(file, (uint64_t *)&curr);
+        if (rc < 0) {
+                char errbuf[1024];
+                ERROR(PLUGIN_NAME "Read from '%s' failed, rc %d, %s.", file, rc,
+                        sstrerror(errno, errbuf, sizeof(errbuf)));
+                return -1;
+        }
+
+        double diff = CDTIME_T_TO_DOUBLE(now) - CDTIME_T_TO_DOUBLE(last);
+        if (last <= 0 || curr < usage || diff < 0) {
+                last = now;
+                usage = curr;
+                *ret = 0;
+                return 0;
+        }
+        *ret = (curr - usage) / (diff) / 1e7;
+        last = now;
+        usage = curr;
+
+        return 0;
+}
+#endif

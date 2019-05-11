@@ -14,6 +14,7 @@ struct procinfo {
 	long rss; /* Kbytes */
 	double cpu_usage; /* 0.9 <-> 90% */
 };
+#define PROCINFO_INIT   { ._.uptime = 0, ._.protime = 0, .rss = 0, .cpu_usage = 0. }
 
 int ps_init(void);
 char *ps_get_comm(pid_t pid);
