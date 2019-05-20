@@ -12,9 +12,9 @@
 
 #define MOD ""
 
-/* 
+/*
  * 123456789 123456789 123456789 123456789
- * /proc/65536/net/ip_tables_targets 
+ * /proc/65536/net/ip_tables_targets
  */
 #define PROC_FILE_LEN_MAX      64
 
@@ -78,3 +78,30 @@ int ps_read_int_from_file(const char *path, uint64_t *ret)
 
         return 0;
 }
+
+int ps_get_lines(const char *path)
+{
+        char buff[128];
+        int fd, i, rc, count = 0;
+
+        fd = open(path, O_RDONLY);
+        if (fd < 0)
+                return -1;
+
+        while (1) {
+                rc = read(fd, buff, sizeof(buff));
+                if (rc < 0 && errno != EINTR) {
+                        close(fd);
+                        return -1;
+                } else if (rc == 0) {
+                        break;
+                }
+                for (i = 0; i < rc; i++)
+                        if (buff[i] == '\n')
+                                count++;
+        }
+        close(fd);
+
+        return count;
+}
+
